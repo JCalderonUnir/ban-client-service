@@ -3,6 +3,7 @@ pipeline {
 
     environment {
         SERVICE_NAME = 'ban-client-service'
+        SERVICE_DIR = 'client-service'
         IMAGE_NAME = 'jcalderonmunir/ban-client-service'
         IMAGE_TAG = "${BUILD_NUMBER}"
         SONAR_HOST_URL = 'http://sonarqube:9000'
@@ -17,18 +18,15 @@ pipeline {
 
         stage('Build') {
             steps {
-                dir("${SERVICE_NAME}") {
+                    sh 'ls -la'
                     sh 'chmod +x mvnw'
                     sh './mvnw clean package -DskipTests'
-                }
             }
         }
 
         stage('Test') {
             steps {
-                dir("${SERVICE_NAME}") {
                     sh './mvnw test'
-                }
             }
             post {
                 always {
@@ -39,7 +37,6 @@ pipeline {
 
         stage('SonarQube Analysis') {
             steps {
-                dir("${SERVICE_NAME}") {
                     withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
                         sh """
                         ./mvnw sonar:sonar \
@@ -49,16 +46,13 @@ pipeline {
                         -Dsonar.token=${SONAR_TOKEN}
                         """
                     }
-                }
             }
         }
 
         stage('Docker Build') {
             steps {
-                dir("${SERVICE_NAME}") {
                     sh "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ."
                     sh "docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${IMAGE_NAME}:latest"
-                }
             }
         }
 
