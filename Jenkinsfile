@@ -4,7 +4,10 @@ pipeline {
     environment {
         SERVICE_NAME = 'ban-client-service'
         IMAGE_NAME = 'jcalderonmunir/ban-client-service'
-        IMAGE_TAG = "${env.BRANCH_NAME}-${BUILD_NUMBER}".replaceAll('/', '-')
+
+        IMAGE_TAG = "${env.BRANCH_NAME}-${BUILD_NUMBER}"
+            .replaceAll('/', '-')
+
         SONAR_HOST_URL = 'http://sonarqube:9000'
 
         DB_URL = "jdbc:postgresql://postgres:5432/client_db"
@@ -13,60 +16,72 @@ pipeline {
     }
 
     stages {
+
         stage('Checkout') {
             steps {
                 checkout scm
             }
         }
 
-        stage('Debug Workspace') {
+        stage('Validate Files') {
             steps {
-                sh 'pwd'
-                sh 'ls -la'
-                sh 'find . -maxdepth 3 -name mvnw'
-            }
-        }
-
-        stage('Validate Structure') {
-            steps {
-                sh 'test -f pom.xml'
-                sh 'test -f mvnw'
-                sh 'test -d src'
-                sh 'test -f Dockerfile'
+                sh '''
+                test -f pom.xml
+                test -f Dockerfile
+                test -f mvnw
+                '''
             }
         }
 
         stage('Build') {
             steps {
-                sh 'chmod +x mvnw'
-                sh './mvnw clean package -DskipTests'
+                sh '''
+                chmod +x mvnw
+                ./mvnw clean package -DskipTests
+                '''
             }
         }
 
-        stage('Test') {
+        stage('Unit Test') {
             steps {
                 sh '''
                 export TESTCONTAINERS_RYUK_DISABLED=true
                 export TESTCONTAINERS_HOST_OVERRIDE=host.docker.internal
-                ./mvnw test -Dspring.profiles.active=test
+
+                ./mvnw test \
+                -Dspring.profiles.active=test
                 '''
             }
+
             post {
                 always {
-                    junit allowEmptyResults: true, testResults: "target/surefire-reports/*.xml"
+                    junit(
+                        allowEmptyResults: true,
+                        testResults: 'target/surefire-reports/*.xml'
+                    )
                 }
             }
         }
 
-        stage('SonarQube Analysis') {
+        stage('SonarQube') {
+
             when {
                 anyOf {
+                    branch 'develop'
                     branch 'qa'
                     branch 'main'
                 }
             }
+
             steps {
-                withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
+
+                withCredentials([
+                    string(
+                        credentialsId: 'sonarqube-token',
+                        variable: 'SONAR_TOKEN'
+                    )
+                ]) {
+
                     sh """
                     ./mvnw sonar:sonar \
                     -Dsonar.projectKey=${SERVICE_NAME} \
@@ -79,26 +94,55 @@ pipeline {
         }
 
         stage('Docker Build') {
+
+            when {
+                anyOf {
+                    branch 'develop'
+                    branch 'qa'
+                    branch 'main'
+                }
+            }
+
             steps {
-                sh "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ."
-                sh "docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${IMAGE_NAME}:latest"
+
+                sh """
+                docker build \
+                -t ${IMAGE_NAME}:${IMAGE_TAG} .
+                """
+
+                sh """
+                docker tag \
+                ${IMAGE_NAME}:${IMAGE_TAG} \
+                ${IMAGE_NAME}:latest
+                """
             }
         }
 
-        stage('Docker Hub Push') {
+        stage('Docker Push') {
+
             when {
                 anyOf {
                     branch 'qa'
                     branch 'main'
                 }
             }
+
             steps {
-                withCredentials([usernamePassword(
-                    credentialsId: 'dockerhub-credentials',
-                    usernameVariable: 'DOCKER_USER',
-                    passwordVariable: 'DOCKER_PASS'
-                )]) {
-                    sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
+
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'dockerhub-credentials',
+                        usernameVariable: 'DOCKER_USER',
+                        passwordVariable: 'DOCKER_PASS'
+                    )
+                ]) {
+
+                    sh '''
+                    echo $DOCKER_PASS | docker login \
+                    -u $DOCKER_USER \
+                    --password-stdin
+                    '''
+
                     sh "docker push ${IMAGE_NAME}:${IMAGE_TAG}"
                     sh "docker push ${IMAGE_NAME}:latest"
                 }
@@ -106,44 +150,59 @@ pipeline {
         }
 
         stage('Deploy DEV') {
+
             when {
                 branch 'develop'
             }
+
             steps {
-                echo "Despliegue DEV para ${SERVICE_NAME}"
-                // Aquí luego puedes agregar kubectl o docker compose para DEV
+                echo 'Deploy ambiente desarrollo'
             }
         }
 
         stage('Deploy QA') {
+
             when {
                 branch 'qa'
             }
+
             steps {
-                echo "Despliegue QA para ${SERVICE_NAME}"
-                // Aquí luego agregas kubeconfig-qa + kubectl/helm
+                echo 'Deploy ambiente QA'
             }
         }
 
-        stage('Deploy PROD') {
+        stage('Deploy Production') {
+
             when {
                 branch 'main'
             }
+
             steps {
-                input message: '¿Confirmas despliegue a producción?'
-                echo "Despliegue PROD para ${SERVICE_NAME}"
-                // Aquí luego agregas kubeconfig-prod + kubectl/helm
+
+                input(
+                    message: '¿Desea desplegar a producción?',
+                    ok: 'Deploy'
+                )
+
+                echo 'Deploy producción'
             }
         }
     }
 
     post {
+
         success {
-            echo "Pipeline ejecutado correctamente para ${SERVICE_NAME} en rama ${env.BRANCH_NAME}"
+            echo """
+            Pipeline ejecutado correctamente
+            Rama: ${env.BRANCH_NAME}
+            """
         }
 
         failure {
-            echo "Error en pipeline para ${SERVICE_NAME} en rama ${env.BRANCH_NAME}"
+            echo """
+            Error en pipeline
+            Rama: ${env.BRANCH_NAME}
+            """
         }
 
         always {
