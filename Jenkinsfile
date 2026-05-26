@@ -47,9 +47,6 @@ pipeline {
                 sh '''
                 export TESTCONTAINERS_RYUK_DISABLED=true
 
-                # Validación de Docker
-                docker ps
-
                 # Ejecutar pruebas
                 ./mvnw test \
                 -Dspring.profiles.active=test
