@@ -42,13 +42,17 @@ pipeline {
             }
         }
 
-        stage('Unit Test') {
+        stage('Test') {
             steps {
                 sh '''
                 export TESTCONTAINERS_RYUK_DISABLED=true
-                export TESTCONTAINERS_HOST_OVERRIDE=host.docker.internal
 
-                ./mvnw test -Dspring.profiles.active=test
+                # Validación de Docker
+                docker ps
+
+                # Ejecutar pruebas
+                ./mvnw test \
+                -Dspring.profiles.active=test
                 '''
             }
 
@@ -56,7 +60,7 @@ pipeline {
                 always {
                     junit(
                         allowEmptyResults: true,
-                        testResults: 'target/surefire-reports/*.xml'
+                        testResults: "target/surefire-reports/*.xml"
                     )
                 }
             }
