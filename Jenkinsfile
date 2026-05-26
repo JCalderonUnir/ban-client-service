@@ -118,75 +118,75 @@ pipeline {
             }
         }
 
-        stage('Docker Push') {
+        // stage('Docker Push') {
 
-            when {
-                anyOf {
-                    branch 'qa'
-                    branch 'main'
-                }
-            }
+        //     when {
+        //         anyOf {
+        //             branch 'qa'
+        //             branch 'main'
+        //         }
+        //     }
 
-            steps {
+        //     steps {
 
-                withCredentials([
-                    usernamePassword(
-                        credentialsId: 'dockerhub-credentials',
-                        usernameVariable: 'DOCKER_USER',
-                        passwordVariable: 'DOCKER_PASS'
-                    )
-                ]) {
+        //         withCredentials([
+        //             usernamePassword(
+        //                 credentialsId: 'dockerhub-credentials',
+        //                 usernameVariable: 'DOCKER_USER',
+        //                 passwordVariable: 'DOCKER_PASS'
+        //             )
+        //         ]) {
 
-                    sh '''
-                    echo $DOCKER_PASS | docker login \
-                    -u $DOCKER_USER \
-                    --password-stdin
-                    '''
+        //             sh '''
+        //             echo $DOCKER_PASS | docker login \
+        //             -u $DOCKER_USER \
+        //             --password-stdin
+        //             '''
 
-                    sh "docker push ${IMAGE_NAME}:${IMAGE_TAG}"
-                    sh "docker push ${IMAGE_NAME}:latest"
-                }
-            }
-        }
+        //             sh "docker push ${IMAGE_NAME}:${IMAGE_TAG}"
+        //             sh "docker push ${IMAGE_NAME}:latest"
+        //         }
+        //     }
+        // }
 
-        stage('Deploy DEV') {
+        // stage('Deploy DEV') {
 
-            when {
-                branch 'develop'
-            }
+        //     when {
+        //         branch 'develop'
+        //     }
 
-            steps {
-                echo 'Deploy ambiente desarrollo'
-            }
-        }
+        //     steps {
+        //         echo 'Deploy ambiente desarrollo'
+        //     }
+        // }
 
-        stage('Deploy QA') {
+        // stage('Deploy QA') {
 
-            when {
-                branch 'qa'
-            }
+        //     when {
+        //         branch 'qa'
+        //     }
 
-            steps {
-                echo 'Deploy ambiente QA'
-            }
-        }
+        //     steps {
+        //         echo 'Deploy ambiente QA'
+        //     }
+        // }
 
-        stage('Deploy Production') {
+        // stage('Deploy Production') {
 
-            when {
-                branch 'main'
-            }
+        //     when {
+        //         branch 'main'
+        //     }
 
-            steps {
+        //     steps {
 
-                input(
-                    message: '¿Desea desplegar a producción?',
-                    ok: 'Deploy'
-                )
+        //         input(
+        //             message: '¿Desea desplegar a producción?',
+        //             ok: 'Deploy'
+        //         )
 
-                echo 'Deploy producción'
-            }
-        }
+        //         echo 'Deploy producción'
+        //     }
+        // }
     }
 
     post {
