@@ -56,27 +56,75 @@ pipeline {
             }
         }
 
-        stage('Docker Hub Push') {
-            steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                    sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
-                    sh "docker push ${IMAGE_NAME}:${IMAGE_TAG}"
-                    sh "docker push ${IMAGE_NAME}:latest"
-                }
-            }
-        }
+        // stage('Docker Push') {
 
-        stage('Deploy Kubernetes') {
-            steps {
-                withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG_FILE')]) {
-                    sh """
-                    export KUBECONFIG=$KUBECONFIG_FILE
-                    kubectl set image deployment/${SERVICE_NAME} ${SERVICE_NAME}=${IMAGE_NAME}:${IMAGE_TAG} -n fincore
-                    kubectl rollout status deployment/${SERVICE_NAME} -n fincore
-                    """
-                }
-            }
-        }
+        //     when {
+        //         anyOf {
+        //             branch 'qa'
+        //             branch 'main'
+        //         }
+        //     }
+
+        //     steps {
+
+        //         withCredentials([
+        //             usernamePassword(
+        //                 credentialsId: 'dockerhub-credentials',
+        //                 usernameVariable: 'DOCKER_USER',
+        //                 passwordVariable: 'DOCKER_PASS'
+        //             )
+        //         ]) {
+
+        //             sh '''
+        //             echo $DOCKER_PASS | docker login \
+        //             -u $DOCKER_USER \
+        //             --password-stdin
+        //             '''
+
+        //             sh "docker push ${IMAGE_NAME}:${IMAGE_TAG}"
+        //             sh "docker push ${IMAGE_NAME}:latest"
+        //         }
+        //     }
+        // }
+
+        // stage('Deploy DEV') {
+
+        //     when {
+        //         branch 'develop'
+        //     }
+
+        //     steps {
+        //         echo 'Deploy ambiente desarrollo'
+        //     }
+        // }
+
+        // stage('Deploy QA') {
+
+        //     when {
+        //         branch 'qa'
+        //     }
+
+        //     steps {
+        //         echo 'Deploy ambiente QA'
+        //     }
+        // }
+
+        // stage('Deploy Production') {
+
+        //     when {
+        //         branch 'main'
+        //     }
+
+        //     steps {
+
+        //         input(
+        //             message: '¿Desea desplegar a producción?',
+        //             ok: 'Deploy'
+        //         )
+
+        //         echo 'Deploy producción'
+        //     }
+        // }
     }
 
     post {
