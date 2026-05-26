@@ -48,8 +48,7 @@ pipeline {
                 export TESTCONTAINERS_RYUK_DISABLED=true
                 export TESTCONTAINERS_HOST_OVERRIDE=host.docker.internal
 
-                ./mvnw test \
-                -Dspring.profiles.active=test
+                ./mvnw test -Dspring.profiles.active=test
                 '''
             }
 
