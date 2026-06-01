@@ -10,13 +10,12 @@ pipeline {
 
         SONAR_HOST_URL = 'http://sonarqube:9000'
 
-        DB_URL = "jdbc:postgresql://postgres:5432/client_db"
-        DB_USERNAME = "usuario"
-        DB_PASSWORD = "contrasena_segura"
+        DB_URL = 'jdbc:postgresql://postgres:5432/client_db'
+        DB_USERNAME = 'usuario'
+        DB_PASSWORD = 'contrasena_segura'
     }
 
     stages {
-
         stage('Checkout') {
             steps {
                 checkout scm
@@ -57,16 +56,16 @@ pipeline {
                 always {
                     junit(
                         allowEmptyResults: true,
-                        testResults: "target/surefire-reports/*.xml"
+                        testResults: 'target/surefire-reports/*.xml'
                     )
                 }
             }
         }
 
         stage('SonarQube') {
-
             when {
                 anyOf {
+                    changeRequest()
                     branch 'develop'
                     branch 'qa'
                     branch 'main'
@@ -74,14 +73,12 @@ pipeline {
             }
 
             steps {
-
                 withCredentials([
                     string(
                         credentialsId: 'sonarqube-token',
                         variable: 'SONAR_TOKEN'
                     )
                 ]) {
-
                     sh """
                     ./mvnw sonar:sonar \
                     -Dsonar.projectKey=${SERVICE_NAME} \
@@ -94,7 +91,6 @@ pipeline {
         }
 
         stage('Docker Build') {
-
             when {
                 anyOf {
                     branch 'develop'
@@ -104,7 +100,6 @@ pipeline {
             }
 
             steps {
-
                 sh """
                 docker build \
                 -t ${IMAGE_NAME}:${IMAGE_TAG} .
@@ -184,13 +179,12 @@ pipeline {
         //             ok: 'Deploy'
         //         )
 
-        //         echo 'Deploy producción'
-        //     }
-        // }
+    //         echo 'Deploy producción'
+    //     }
+    // }
     }
 
     post {
-
         success {
             echo """
             Pipeline ejecutado correctamente
