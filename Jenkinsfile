@@ -62,43 +62,33 @@ pipeline {
             }
         }
 
-        stage('SonarQube') {
-            when {
-                anyOf {
-                    changeRequest()
-                    branch 'develop'
-                    branch 'qa'
-                    branch 'main'
-                }
-            }
-
+        stage('SonarQube Analysis') {
             steps {
-                withCredentials([
-                    string(
-                        credentialsId: 'sonarqube-token',
-                        variable: 'SONAR_TOKEN'
-                    )
-                ]) {
-                    sh """
+                withSonarQubeEnv('sonarqube') {
+                    script {
+                        if (env.CHANGE_ID) {
+                            sh """
                     ./mvnw sonar:sonar \
-                    -Dsonar.projectKey=${SERVICE_NAME} \
-                    -Dsonar.projectName=${SERVICE_NAME} \
-                    -Dsonar.host.url=${SONAR_HOST_URL} \
-                    -Dsonar.token=${SONAR_TOKEN}
+                      -Dsonar.projectKey=ban-client-service \
+                      -Dsonar.projectName=ban-client-service \
+                      -Dsonar.pullrequest.key=${env.CHANGE_ID} \
+                      -Dsonar.pullrequest.branch=${env.CHANGE_BRANCH} \
+                      -Dsonar.pullrequest.base=${env.CHANGE_TARGET}
                     """
+                } else {
+                            sh """
+                    ./mvnw sonar:sonar \
+                      -Dsonar.projectKey=ban-client-service \
+                      -Dsonar.projectName=ban-client-service \
+                      -Dsonar.branch.name=${env.BRANCH_NAME}
+                    """
+                        }
+                    }
                 }
             }
         }
 
         stage('Quality Gate') {
-            when {
-                anyOf {
-                    changeRequest()
-                    branch 'develop'
-                    branch 'qa'
-                    branch 'main'
-                }
-            }
             steps {
                 timeout(time: 5, unit: 'MINUTES') {
                     waitForQualityGate abortPipeline: true
