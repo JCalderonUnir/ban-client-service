@@ -64,7 +64,7 @@ pipeline {
 
         stage('SonarQube Analysis') {
             steps {
-                withSonarQubeEnv('sonarqube') {
+                withSonarQubeEnv('sonarqube-local') {
                     script {
                         if (env.CHANGE_ID) {
                             sh """
