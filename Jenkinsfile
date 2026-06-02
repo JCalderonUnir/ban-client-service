@@ -117,16 +117,43 @@ pipeline {
 
             steps {
                 sh """
-                    docker build \
-                    -t ${IMAGE_NAME}:${IMAGE_TAG} \
-                    .
+                docker build \
+                -t ${IMAGE_NAME}:${IMAGE_TAG} \
+                .
                 """
+            }
+        }
+
+        stage('Docker Tag') {
+            when {
+                anyOf {
+                    branch 'develop'
+                    branch 'qa'
+                    branch 'main'
+                }
+            }
+
+            steps {
+                script {
+                    def ENV_TAG = ""
+
+                    if (env.BRANCH_NAME == 'develop') {
+                        ENV_TAG = "dev"
+                    } else if (env.BRANCH_NAME == 'qa') {
+                        ENV_TAG = "qa"
+                    } else if (env.BRANCH_NAME == 'main') {
+                        ENV_TAG = "latest"
+                    }
+
+                    sh "docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${IMAGE_NAME}:${ENV_TAG}"
+                }
             }
         }
 
         stage('Docker Push') {
             when {
                 anyOf {
+                    branch 'develop'
                     branch 'qa'
                     branch 'main'
                 }
@@ -134,20 +161,34 @@ pipeline {
 
             steps {
                 withCredentials([
-            usernamePassword(
-                credentialsId: 'dockerhub-credentials',
-                usernameVariable: 'DOCKER_USER',
-                passwordVariable: 'DOCKER_PASS'
-            )
-            ]) {
-                        sh '''
+                    usernamePassword(
+                        credentialsId: 'dockerhub-credentials',
+                        usernameVariable: 'DOCKER_USER',
+                        passwordVariable: 'DOCKER_PASS'
+                    )
+                ]) {
+                    sh '''
                     echo $DOCKER_PASS | docker login \
                     -u $DOCKER_USER \
                     --password-stdin
-                '''
+                    '''
 
-                        sh "docker push ${IMAGE_NAME}:${IMAGE_TAG}"
-            }
+                    sh "docker push ${IMAGE_NAME}:${IMAGE_TAG}"
+
+                    script {
+                        def ENV_TAG = ""
+
+                        if (env.BRANCH_NAME == 'develop') {
+                            ENV_TAG = "dev"
+                        } else if (env.BRANCH_NAME == 'qa') {
+                            ENV_TAG = "qa"
+                        } else if (env.BRANCH_NAME == 'main') {
+                            ENV_TAG = "latest"
+                        }
+
+                        sh "docker push ${IMAGE_NAME}:${ENV_TAG}"
+                    }
+                }
             }
         }
 
