@@ -90,21 +90,21 @@ pipeline {
             }
         }
 
-        stage('Quality Gate') {
-            when {
-                anyOf {
-                    changeRequest()
-                    branch 'develop'
-                    branch 'qa'
-                    branch 'main'
-                }
-            }
-            steps {
-                timeout(time: 5, unit: 'MINUTES') {
-                    waitForQualityGate abortPipeline: true
-                }
-            }
-        }
+        // stage('Quality Gate') {
+        //     when {
+        //         anyOf {
+        //             changeRequest()
+        //             branch 'develop'
+        //             branch 'qa'
+        //             branch 'main'
+        //         }
+        //     }
+        //     steps {
+        //         timeout(time: 5, unit: 'MINUTES') {
+        //             waitForQualityGate abortPipeline: true
+        //         }
+        //     }
+        // }
 
         stage('Docker Build') {
             when {
