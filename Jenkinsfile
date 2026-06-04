@@ -59,36 +59,36 @@ pipeline {
             }
         }
 
-        // stage('Docker Push') {
+        stage('Docker Push') {
 
-        //     when {
-        //         anyOf {
-        //             branch 'qa'
-        //             branch 'main'
-        //         }
-        //     }
+             when {
+                 anyOf {
+                     branch 'qa'
+                     branch 'main'
+                 }
+             }
 
-        //     steps {
+             steps {
 
-        //         withCredentials([
-        //             usernamePassword(
-        //                 credentialsId: 'dockerhub-credentials',
-        //                 usernameVariable: 'DOCKER_USER',
-        //                 passwordVariable: 'DOCKER_PASS'
-        //             )
-        //         ]) {
+                 withCredentials([
+                     usernamePassword(
+                         credentialsId: 'dockerhub-credentials',
+                         usernameVariable: 'DOCKER_USER',
+                         passwordVariable: 'DOCKER_PASS'
+                     )
+                 ]) {
 
-        //             sh '''
-        //             echo $DOCKER_PASS | docker login \
-        //             -u $DOCKER_USER \
-        //             --password-stdin
-        //             '''
+                     sh '''
+                     echo $DOCKER_PASS | docker login \
+                     -u $DOCKER_USER \
+                     --password-stdin
+                     '''
 
-        //             sh "docker push ${IMAGE_NAME}:${IMAGE_TAG}"
-        //             sh "docker push ${IMAGE_NAME}:latest"
-        //         }
-        //     }
-        // }
+                     sh "docker push ${IMAGE_NAME}:${IMAGE_TAG}"
+                     sh "docker push ${IMAGE_NAME}:latest"
+                 }
+             }
+         }
 
         // stage('Deploy DEV') {
 
