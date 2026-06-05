@@ -192,44 +192,41 @@ pipeline {
             }
         }
 
-         stage('Deploy DEV') {
-
-             when {
-                 branch 'develop'
-             }
-
-             steps {
-                 echo 'Deploy ambiente desarrollo'
-             }
-         }
-
-        // stage('Deploy QA') {
-
-        //     when {
-        //         branch 'qa'
-        //     }
-
-        //     steps {
-        //         echo 'Deploy ambiente QA'
-        //     }
-        // }
-
-        // stage('Deploy Production') {
-
-        //     when {
-        //         branch 'main'
-        //     }
-
-        //     steps {
-
-        //         input(
-        //             message: '¿Desea desplegar a producción?',
-        //             ok: 'Deploy'
-        //         )
-
-    //         echo 'Deploy producción'
-    //     }
-    // }
+        stage('Deploy Kubernetes') {
+            when {
+                anyOf {
+                    branch 'develop'
+                    branch 'qa'
+                    branch 'main'
+                }
+            }
+        
+            steps {
+                script {
+                    def kubeCredential = ''
+                    def overlayPath = ''
+        
+                    if (env.BRANCH_NAME == 'develop') {
+                        kubeCredential = 'kubeconfig-dev'
+                        overlayPath = 'k8s/overlays/dev'
+                    } else if (env.BRANCH_NAME == 'qa') {
+                        kubeCredential = 'kubeconfig-qa'
+                        overlayPath = 'k8s/overlays/qa'
+                    } else if (env.BRANCH_NAME == 'main') {
+                        kubeCredential = 'kubeconfig-prod'
+                        overlayPath = 'k8s/overlays/production'
+                    }
+        
+                    withCredentials([file(credentialsId: kubeCredential, variable: 'KUBECONFIG_FILE')]) {
+                        sh """
+                        export KUBECONFIG=$KUBECONFIG_FILE
+                        kubectl apply -k ${overlayPath}
+                        kubectl rollout status deployment/client-service -n tfm-${env.BRANCH_NAME == 'main' ? 'prod' : env.BRANCH_NAME}
+                        """
+                    }
+                }
+            }
+        }
     }
 
     post {
