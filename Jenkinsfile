@@ -202,35 +202,28 @@ pipeline {
             }
 
             steps {
-                withCredentials([
-                    file(
-                        credentialsId: 'kubeconfig-k3s',
-                        variable: 'KUBECONFIG_FILE'
-                    )
-                ]) {
-                    sh '''
+                withCredentials([file(credentialsId: 'kubeconfig-k3s', variable: 'KUBECONFIG_FILE')]) {
+                    sh """
                     export KUBECONFIG=$KUBECONFIG_FILE
 
-                    kubectl get nodes
-
                     if [ "$BRANCH_NAME" = "develop" ]; then
-                        kubectl set image deployment/client-service client-service=${IMAGE_NAME}:${IMAGE_TAG} -n tfm-dev || true
                         kubectl apply -k k8s/overlays/dev
+                        kubectl set image deployment/client-service client-service=${IMAGE_NAME}:${IMAGE_TAG} -n tfm-dev
                         kubectl rollout status deployment/client-service -n tfm-dev
 
                     elif [ "$BRANCH_NAME" = "qa" ]; then
-                        kubectl set image deployment/client-service client-service=${IMAGE_NAME}:${IMAGE_TAG} -n tfm-qa || true
                         kubectl apply -k k8s/overlays/qa
+                        kubectl set image deployment/client-service client-service=${IMAGE_NAME}:${IMAGE_TAG} -n tfm-qa
                         kubectl rollout status deployment/client-service -n tfm-qa
 
                     elif [ "$BRANCH_NAME" = "main" ]; then
-                        input "¿Confirmas despliegue a producción?"
-
-                        kubectl set image deployment/client-service client-service=${IMAGE_NAME}:${IMAGE_TAG} -n tfm-prod || true
                         kubectl apply -k k8s/overlays/production
+                        kubectl set image deployment/client-service client-service=${IMAGE_NAME}:${IMAGE_TAG} -n tfm-prod
                         kubectl rollout status deployment/client-service -n tfm-prod
                     fi
-                    '''
+
+                    kubectl get pods -A
+                    """
                 }
             }
         }

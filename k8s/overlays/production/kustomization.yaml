@@ -2,7 +2,3 @@ namespace: tfm-prod
 
 resources:
   - ../../base/client-service
-
-images:
-  - name: jcalderonmunir/ban-client-service
-    newTag: latest
