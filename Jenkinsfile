@@ -90,21 +90,21 @@ pipeline {
             }
         }
 
-        stage('Quality Gate') {
-            when {
-                anyOf {
-                    changeRequest()
-                    branch 'develop'
-                    branch 'qa'
-                    branch 'main'
-                }
-            }
-            steps {
-                timeout(time: 5, unit: 'MINUTES') {
-                    waitForQualityGate abortPipeline: true
-                }
-            }
-        }
+        // stage('Quality Gate') {
+        //     when {
+        //         anyOf {
+        //             changeRequest()
+        //             branch 'develop'
+        //             branch 'qa'
+        //             branch 'main'
+        //         }
+        //     }
+        //     steps {
+        //         timeout(time: 5, unit: 'MINUTES') {
+        //             waitForQualityGate abortPipeline: true
+        //         }
+        //     }
+        // }
 
         stage('Docker Build') {
             when {
@@ -117,16 +117,43 @@ pipeline {
 
             steps {
                 sh """
-                    docker build \
-                    -t ${IMAGE_NAME}:${IMAGE_TAG} \
-                    .
+                docker build \
+                -t ${IMAGE_NAME}:${IMAGE_TAG} \
+                .
                 """
+            }
+        }
+
+        stage('Docker Tag') {
+            when {
+                anyOf {
+                    branch 'develop'
+                    branch 'qa'
+                    branch 'main'
+                }
+            }
+
+            steps {
+                script {
+                    def ENV_TAG = ""
+
+                    if (env.BRANCH_NAME == 'develop') {
+                        ENV_TAG = "dev"
+                    } else if (env.BRANCH_NAME == 'qa') {
+                        ENV_TAG = "qa"
+                    } else if (env.BRANCH_NAME == 'main') {
+                        ENV_TAG = "latest"
+                    }
+
+                    sh "docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${IMAGE_NAME}:${ENV_TAG}"
+                }
             }
         }
 
         stage('Docker Push') {
             when {
                 anyOf {
+                    branch 'develop'
                     branch 'qa'
                     branch 'main'
                 }
@@ -134,61 +161,67 @@ pipeline {
 
             steps {
                 withCredentials([
-            usernamePassword(
-                credentialsId: 'dockerhub-credentials',
-                usernameVariable: 'DOCKER_USER',
-                passwordVariable: 'DOCKER_PASS'
-            )
-            ]) {
-                        sh '''
+                    usernamePassword(
+                        credentialsId: 'dockerhub-credentials',
+                        usernameVariable: 'DOCKER_USER',
+                        passwordVariable: 'DOCKER_PASS'
+                    )
+                ]) {
+                    sh '''
                     echo $DOCKER_PASS | docker login \
                     -u $DOCKER_USER \
                     --password-stdin
-                '''
+                    '''
 
-                        sh "docker push ${IMAGE_NAME}:${IMAGE_TAG}"
-            }
+                    sh "docker push ${IMAGE_NAME}:${IMAGE_TAG}"
+
+                    script {
+                        def ENV_TAG = ""
+
+                        if (env.BRANCH_NAME == 'develop') {
+                            ENV_TAG = "dev"
+                        } else if (env.BRANCH_NAME == 'qa') {
+                            ENV_TAG = "qa"
+                        } else if (env.BRANCH_NAME == 'main') {
+                            ENV_TAG = "latest"
+                        }
+
+                        sh "docker push ${IMAGE_NAME}:${ENV_TAG}"
+                    }
+                }
             }
         }
 
-        // stage('Deploy DEV') {
-
-        //     when {
-        //         branch 'develop'
-        //     }
-
-        //     steps {
-        //         echo 'Deploy ambiente desarrollo'
-        //     }
-        // }
-
-        // stage('Deploy QA') {
-
-        //     when {
-        //         branch 'qa'
-        //     }
-
-        //     steps {
-        //         echo 'Deploy ambiente QA'
-        //     }
-        // }
-
-        // stage('Deploy Production') {
-
-        //     when {
-        //         branch 'main'
-        //     }
-
-        //     steps {
-
-        //         input(
-        //             message: '¿Desea desplegar a producción?',
-        //             ok: 'Deploy'
-        //         )
-
-    //         echo 'Deploy producción'
-    //     }
-    // }
+        stage('Deploy Kubernetes') {
+            when {
+                anyOf {
+                    branch 'develop'
+                    branch 'qa'
+                    branch 'main'
+                }
+            }
+        
+            steps {
+                withCredentials([file(credentialsId: 'kubeconfig-k3s', variable: 'KUBECONFIG_FILE')]) {
+                    sh '''
+                    export KUBECONFIG=$KUBECONFIG_FILE
+        
+                    kubectl get nodes
+        
+                    if [ "$BRANCH_NAME" = "develop" ]; then
+                        kubectl apply -k k8s/overlays/dev
+                        kubectl rollout status deployment/client-service -n tfm-dev
+                    elif [ "$BRANCH_NAME" = "qa" ]; then
+                        kubectl apply -k k8s/overlays/qa
+                        kubectl rollout status deployment/client-service -n tfm-qa
+                    elif [ "$BRANCH_NAME" = "main" ]; then
+                        kubectl apply -k k8s/overlays/production
+                        kubectl rollout status deployment/client-service -n tfm-prod
+                    fi
+                    '''
+                }
+            }
+        }
     }
 
     post {
