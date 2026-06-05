@@ -192,16 +192,16 @@ pipeline {
             }
         }
 
-        // stage('Deploy DEV') {
+         stage('Deploy DEV') {
 
-        //     when {
-        //         branch 'develop'
-        //     }
+             when {
+                 branch 'develop'
+             }
 
-        //     steps {
-        //         echo 'Deploy ambiente desarrollo'
-        //     }
-        // }
+             steps {
+                 echo 'Deploy ambiente desarrollo'
+             }
+         }
 
         // stage('Deploy QA') {
 
