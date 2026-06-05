@@ -1,0 +1,8 @@
+namespace: tfm-qa
+
+resources:
+  - ../../base/client-service
+
+images:
+  - name: jcalderonmunir/ban-client-service
+    newTag: qa
