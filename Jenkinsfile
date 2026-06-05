@@ -202,28 +202,23 @@ pipeline {
             }
         
             steps {
-                script {
-                    def kubeCredential = ''
-                    def overlayPath = ''
+                withCredentials([file(credentialsId: 'kubeconfig-k3s', variable: 'KUBECONFIG_FILE')]) {
+                    sh '''
+                    export KUBECONFIG=$KUBECONFIG_FILE
         
-                    if (env.BRANCH_NAME == 'develop') {
-                        kubeCredential = 'kubeconfig-dev'
-                        overlayPath = 'k8s/overlays/dev'
-                    } else if (env.BRANCH_NAME == 'qa') {
-                        kubeCredential = 'kubeconfig-qa'
-                        overlayPath = 'k8s/overlays/qa'
-                    } else if (env.BRANCH_NAME == 'main') {
-                        kubeCredential = 'kubeconfig-prod'
-                        overlayPath = 'k8s/overlays/production'
-                    }
+                    kubectl get nodes
         
-                    withCredentials([file(credentialsId: kubeCredential, variable: 'KUBECONFIG_FILE')]) {
-                        sh """
-                        export KUBECONFIG=$KUBECONFIG_FILE
-                        kubectl apply -k ${overlayPath}
-                        kubectl rollout status deployment/client-service -n tfm-${env.BRANCH_NAME == 'main' ? 'prod' : env.BRANCH_NAME}
-                        """
-                    }
+                    if [ "$BRANCH_NAME" = "develop" ]; then
+                        kubectl apply -k k8s/overlays/dev
+                        kubectl rollout status deployment/client-service -n tfm-dev
+                    elif [ "$BRANCH_NAME" = "qa" ]; then
+                        kubectl apply -k k8s/overlays/qa
+                        kubectl rollout status deployment/client-service -n tfm-qa
+                    elif [ "$BRANCH_NAME" = "main" ]; then
+                        kubectl apply -k k8s/overlays/production
+                        kubectl rollout status deployment/client-service -n tfm-prod
+                    fi
+                    '''
                 }
             }
         }
