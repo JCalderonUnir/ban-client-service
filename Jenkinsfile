@@ -203,7 +203,7 @@ pipeline {
 
             steps {
                 withCredentials([file(credentialsId: 'kubeconfig-k3s', variable: 'KUBECONFIG_FILE')]) {
-                    sh """
+                    sh '''
                     export KUBECONFIG=$KUBECONFIG_FILE
 
                     if [ "$BRANCH_NAME" = "develop" ]; then
@@ -223,7 +223,7 @@ pipeline {
                     fi
 
                     kubectl get pods -A
-                    """
+                    '''
                 }
             }
         }
