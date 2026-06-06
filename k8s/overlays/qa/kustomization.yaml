@@ -1,0 +1,4 @@
+namespace: tfm-qa
+
+resources:
+  - ../../base/client-service
