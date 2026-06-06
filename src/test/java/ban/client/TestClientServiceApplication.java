@@ -1,4 +1,4 @@
-package ban.client.service;
+package ban.client;
 
 import org.springframework.boot.SpringApplication;
 
