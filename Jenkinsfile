@@ -192,7 +192,7 @@ pipeline {
             }
         }
 
-        stage('Deploy Kubernetes') {
+        stage('Create Image Pull Secret') {
             when {
                 anyOf {
                     branch 'develop'
@@ -202,27 +202,88 @@ pipeline {
             }
 
             steps {
-                withCredentials([file(credentialsId: 'kubeconfig-k3s', variable: 'KUBECONFIG_FILE')]) {
+
+                withCredentials([
+                    file(
+                        credentialsId: 'kubeconfig-k3s',
+                        variable: 'KUBECONFIG_FILE'
+                    ),
+                    usernamePassword(
+                        credentialsId: 'dockerhub-credentials',
+                        usernameVariable: 'DOCKER_USER',
+                        passwordVariable: 'DOCKER_PASS'
+                    )
+                ]) {
+
                     sh '''
                     export KUBECONFIG=$KUBECONFIG_FILE
 
                     if [ "$BRANCH_NAME" = "develop" ]; then
-                        kubectl apply -k k8s/overlays/dev
-                        kubectl set image deployment/client-service client-service=${IMAGE_NAME}:${IMAGE_TAG} -n tfm-dev
-                        kubectl rollout status deployment/client-service -n tfm-dev
-
+                        NAMESPACE=tfm-dev
                     elif [ "$BRANCH_NAME" = "qa" ]; then
-                        kubectl apply -k k8s/overlays/qa
-                        kubectl set image deployment/client-service client-service=${IMAGE_NAME}:${IMAGE_TAG} -n tfm-qa
-                        kubectl rollout status deployment/client-service -n tfm-qa
-
-                    elif [ "$BRANCH_NAME" = "main" ]; then
-                        kubectl apply -k k8s/overlays/production
-                        kubectl set image deployment/client-service client-service=${IMAGE_NAME}:${IMAGE_TAG} -n tfm-prod
-                        kubectl rollout status deployment/client-service -n tfm-prod
+                        NAMESPACE=tfm-qa
+                    else
+                        NAMESPACE=tfm-prod
                     fi
 
-                    kubectl get pods -A
+                    kubectl create secret docker-registry dockerhub-secret \
+                    --docker-username=$DOCKER_USER \
+                    --docker-password=$DOCKER_PASS \
+                    --docker-email=devops@fincore.local \
+                    -n $NAMESPACE \
+                    --dry-run=client -o yaml | kubectl apply -f -
+                    '''
+                }
+            }
+        }
+
+        stage('Deploy Kubernetes') {
+            steps {
+
+                withCredentials([
+                    file(
+                        credentialsId: 'kubeconfig-k3s',
+                        variable: 'KUBECONFIG_FILE'
+                    )
+                ]) {
+
+                    sh '''
+                    export KUBECONFIG=$KUBECONFIG_FILE
+
+                    if [ "$BRANCH_NAME" = "develop" ]; then
+
+                        kubectl apply -k k8s/overlays/dev
+
+                        kubectl set image deployment/client-service \
+                        client-service=$IMAGE_NAME:$IMAGE_TAG \
+                        -n tfm-dev
+
+                        kubectl rollout status deployment/client-service \
+                        -n tfm-dev
+
+                    elif [ "$BRANCH_NAME" = "qa" ]; then
+
+                        kubectl apply -k k8s/overlays/qa
+
+                        kubectl set image deployment/client-service \
+                        client-service=$IMAGE_NAME:$IMAGE_TAG \
+                        -n tfm-qa
+
+                        kubectl rollout status deployment/client-service \
+                        -n tfm-qa
+
+                    else
+
+                        kubectl apply -k k8s/overlays/production
+
+                        kubectl set image deployment/client-service \
+                        client-service=$IMAGE_NAME:$IMAGE_TAG \
+                        -n tfm-prod
+
+                        kubectl rollout status deployment/client-service \
+                        -n tfm-prod
+
+                    fi
                     '''
                 }
             }

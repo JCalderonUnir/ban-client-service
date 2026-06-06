@@ -12,6 +12,8 @@ spec:
       labels:
         app: client-service
     spec:
+      imagePullSecrets:
+        - name: dockerhub-secret
       containers:
         - name: client-service
           image: jcalderonmunir/ban-client-service:placeholder
