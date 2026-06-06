@@ -239,6 +239,13 @@ pipeline {
 
         stage('Deploy Kubernetes') {
             steps {
+                when {
+                    anyOf {
+                        branch 'develop'
+                        branch 'qa'
+                        branch 'main'
+                    }
+                }
 
                 withCredentials([
                     file(
