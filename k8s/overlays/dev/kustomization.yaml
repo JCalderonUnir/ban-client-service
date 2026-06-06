@@ -1,0 +1,5 @@
+namespace: tfm-dev
+
+resources:
+  - ../../base/client-service
+
