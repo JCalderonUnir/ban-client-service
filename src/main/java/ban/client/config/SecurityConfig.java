@@ -44,9 +44,8 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
 
         configuration.setAllowedOrigins(List.of(
-                "http://localhost:5174",
-                "https://tfm-develop.nexcalder.dev",
-                "http://localhost:4200"
+                "http://192.168.20.22:30090",
+                "https://tfm-develop.nexcalder.dev"
         ));
 
         configuration.setAllowedMethods(List.of(
