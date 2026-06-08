@@ -1,4 +1,7 @@
 spring:
+  servlet:
+    context-path: /api
+    
   application:
     name: client-service
   
