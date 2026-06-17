@@ -13,6 +13,9 @@ pipeline {
         DB_URL = 'jdbc:postgresql://postgres:5432/client_db'
         DB_USERNAME = 'usuario'
         DB_PASSWORD = 'contrasena_segura'
+
+        INFRA_REPO = 'https://github.com/JCalderonUnir/ban-infrastructure.git'
+        INFRA_BRANCH = 'main'
     }
 
     stages {
@@ -236,54 +239,48 @@ pipeline {
                 }
             }
         }
+        stage('Update Infrastructure Repository') {
+            when {
+                anyOf {
+                    branch 'develop'
+                    branch 'qa'
+                    branch 'main'
+                }
+            }
 
-        stage('Deploy Kubernetes') {
             steps {
-
                 withCredentials([
-                    file(
-                        credentialsId: 'kubeconfig-k3s',
-                        variable: 'KUBECONFIG_FILE'
+                    usernamePassword(
+                        credentialsId: 'github-infrastructure',
+                        usernameVariable: 'GIT_USER',
+                        passwordVariable: 'GIT_TOKEN'
                     )
                 ]) {
-
                     sh '''
-                    export KUBECONFIG=$KUBECONFIG_FILE
+                    rm -rf infra-temp
+
+                    git clone https://${GIT_USER}:${GIT_TOKEN}@github.com/JCalderonUnir/infrastructure.git infra-temp
+
+                    cd infra-temp
 
                     if [ "$BRANCH_NAME" = "develop" ]; then
-
-                        kubectl apply -k k8s/overlays/dev
-
-                        kubectl set image deployment/client-service \
-                        client-service=$IMAGE_NAME:$IMAGE_TAG \
-                        -n tfm-dev
-
-                        kubectl rollout status deployment/client-service \
-                        -n tfm-dev
-
+                        PATCH_FILE="k8s/overlays/dev/client-service-patch.yaml"
                     elif [ "$BRANCH_NAME" = "qa" ]; then
-
-                        kubectl apply -k k8s/overlays/qa
-
-                        kubectl set image deployment/client-service \
-                        client-service=$IMAGE_NAME:$IMAGE_TAG \
-                        -n tfm-qa
-
-                        kubectl rollout status deployment/client-service \
-                        -n tfm-qa
-
+                        PATCH_FILE="k8s/overlays/qa/client-service-patch.yaml"
                     else
-
-                        kubectl apply -k k8s/overlays/production
-
-                        kubectl set image deployment/client-service \
-                        client-service=$IMAGE_NAME:$IMAGE_TAG \
-                        -n tfm-prod
-
-                        kubectl rollout status deployment/client-service \
-                        -n tfm-prod
-
+                        PATCH_FILE="k8s/overlays/production/client-service-patch.yaml"
                     fi
+
+                    sed -i "s|image: jcalderonmunir/ban-client-service:.*|image: ${IMAGE_NAME}:${IMAGE_TAG}|g" $PATCH_FILE
+
+                    git config user.email "jenkins@nexcalder.dev"
+                    git config user.name "Jenkins GitOps"
+
+                    git add $PATCH_FILE
+
+                    git commit -m "chore(gitops): update client-service image to ${IMAGE_TAG}" || echo "No changes to commit"
+
+                    git push origin main
                     '''
                 }
             }
