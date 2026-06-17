@@ -259,7 +259,7 @@ pipeline {
                     sh '''
                     rm -rf infra-temp
 
-                    git clone https://${GIT_USER}:${GIT_TOKEN}@github.com/JCalderonUnir/infrastructure.git infra-temp
+                    git clone https://${GIT_USER}:${GIT_TOKEN}@github.com/JCalderonUnir/ban-infrastructure.git infra-temp
 
                     cd infra-temp
 
