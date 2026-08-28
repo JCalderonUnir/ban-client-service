@@ -259,7 +259,8 @@ pipeline {
                     sh '''
                     rm -rf infra-temp
 
-                    git clone https://${GIT_USER}:${GIT_TOKEN}@github.com/JCalderonUnir/ban-infrastructure.git infra-temp
+                    git clone --branch "$INFRA_BRANCH" --single-branch \
+                        https://${GIT_USER}:${GIT_TOKEN}@github.com/JCalderonUnir/ban-infrastructure.git infra-temp
 
                     cd infra-temp
 
@@ -271,16 +272,26 @@ pipeline {
                         PATCH_FILE="k8s/overlays/production/client-service-patch.yaml"
                     fi
 
-                    sed -i "s|image: jcalderonmunir/ban-client-service:.*|image: ${IMAGE_NAME}:${IMAGE_TAG}|g" $PATCH_FILE
+                    test -f "$PATCH_FILE"
+                    sed -i "s|image: jcalderonmunir/ban-client-service:.*|image: ${IMAGE_NAME}:${IMAGE_TAG}|g" "$PATCH_FILE"
 
                     git config user.email "jenkins@nexcalder.dev"
                     git config user.name "Jenkins GitOps"
 
-                    git add $PATCH_FILE
-
+                    git add "$PATCH_FILE"
                     git commit -m "chore(gitops): update client-service image to ${IMAGE_TAG}" || echo "No changes to commit"
 
-                    git push origin main
+                    for attempt in 1 2 3; do
+                        if git push origin "$INFRA_BRANCH"; then
+                            break
+                        fi
+
+                        if [ "$attempt" -eq 3 ]; then
+                            exit 1
+                        fi
+
+                        git pull --rebase origin "$INFRA_BRANCH"
+                    done
                     '''
                 }
             }
