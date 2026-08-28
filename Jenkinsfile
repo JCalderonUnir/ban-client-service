@@ -13,6 +13,7 @@ pipeline {
         DB_URL = 'jdbc:postgresql://postgres:5432/client_db'
         DB_USERNAME = 'usuario'
         DB_PASSWORD = 'contrasena_segura'
+        CLIENT_SECRET_KEYCLOAK = 'NJWTjBR3U3NSHDK9PAesUQhhd4HeEI1i'
 
         INFRA_REPO = 'https://github.com/JCalderonUnir/ban-infrastructure.git'
         INFRA_BRANCH = 'main'
@@ -232,6 +233,13 @@ pipeline {
                     --docker-username=$DOCKER_USER \
                     --docker-password=$DOCKER_PASS \
                     --docker-email=devops@fincore.local \
+                    -n $NAMESPACE \
+                    --dry-run=client -o yaml | kubectl apply -f -
+
+                    kubectl create secret generic application-secrets \
+                    --from-literal=DB_USERNAME="$DB_USERNAME" \
+                    --from-literal=DB_PASSWORD="$DB_PASSWORD" \
+                    --from-literal=KEYCLOAK_CLIENT_SECRET="$CLIENT_SECRET_KEYCLOAK" \
                     -n $NAMESPACE \
                     --dry-run=client -o yaml | kubectl apply -f -
                     '''
