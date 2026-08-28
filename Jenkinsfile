@@ -79,13 +79,12 @@ pipeline {
                         variable: 'SONAR_TOKEN'
                     )
                 ]) {
-                    sh """
-                    ./mvnw sonar:sonar \
-                    -Dsonar.projectKey=${SERVICE_NAME} \
-                    -Dsonar.projectName=${SERVICE_NAME} \
-                    -Dsonar.host.url=${SONAR_HOST_URL} \
-                    -Dsonar.token=${SONAR_TOKEN}
-                    """
+                    sh '''
+                    ./mvnw org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
+                    -Dsonar.projectKey=$SERVICE_NAME \
+                    -Dsonar.projectName=$SERVICE_NAME \
+                    -Dsonar.host.url=$SONAR_HOST_URL
+                    '''
                 }
             }
         }
