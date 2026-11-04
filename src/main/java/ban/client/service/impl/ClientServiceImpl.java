@@ -79,7 +79,8 @@ public class ClientServiceImpl implements ClientService {
     public void delete(UUID id) {
         Client client = clientRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Cliente no encontrado"));
-
-        clientRepository.delete(client);
+        // Preserve the financial relationship and historical records; 0 means inactive.
+        client.setStatus(0);
+        clientRepository.save(client);
     }
 }
