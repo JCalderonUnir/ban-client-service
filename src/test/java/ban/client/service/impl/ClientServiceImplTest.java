@@ -193,7 +193,7 @@ class ClientServiceImplTest {
     }
 
     @Test
-    void delete_ShouldDeleteClient_WhenClientExists() {
+    void delete_ShouldDeactivateClient_WhenClientExists() {
         UUID id = UUID.randomUUID();
 
         Client client = Client.builder()
@@ -205,7 +205,8 @@ class ClientServiceImplTest {
 
         clientService.delete(id);
 
+        assertEquals(0, client.getStatus());
         verify(clientRepository).findById(id);
-        verify(clientRepository).delete(client);
+        verify(clientRepository).save(client);
     }
 }
