@@ -246,7 +246,6 @@ pipeline {
                 }
             }
         }
-
         stage('Update Infrastructure Repository') {
             when {
                 anyOf {

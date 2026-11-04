@@ -1,4 +1,0 @@
-namespace: tfm-prod
-
-resources:
-  - ../../base/client-service
